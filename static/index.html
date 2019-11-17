@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Report of Internet Usage</title>
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+        integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="app.css">
+</head>
+
+<body>
+    <nav class="navbar navbar-dark fixed-top bg-dark flex-md-nowrap p-0 shadow">
+        <a class="navbar-brand col-sm-3 col-md-2 mr-0" href="#">My Report</a>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <nav class="col-md-2 d-none d-md-block bg-light sidebar">
+                <div class="sidebar-sticky">
+                    <ul id="deviceList" class="nav flex-column"></ul>
+                </div>
+            </nav>
+
+            <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-4">
+                <div
+                    class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Dashboard</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <div class="btn-group mr-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-toggle="modal" data-target="#exampleModal">Rename</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary">Export</button>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle">
+                            <span data-feather="calendar"></span>
+                            This week
+                        </button>
+                    </div>
+                </div>
+                <canvas id="myChart" class="my-4 w-100" width="900" height="380"></canvas>
+                <h2>Section title</h2>
+                <div class="table-responsive">
+                    <table class="table table-striped table-sm">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Device Mac</th>
+                                <th>Upload</th>
+                                <th>Download</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Rename</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <input class="form-control" type="text" placeholder="New name" id="newNameInput">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="renameDevice()" data-dismiss="modal">Save changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+        integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+        crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+        integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+        crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+        crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.bundle.js"
+        integrity="sha256-qSIshlknROr4J8GMHRlW3fGKrPki733tLq+qeMCR05Q=" crossorigin="anonymous"></script>
+    <script type="text/javascript">
+        var fetched = [];
+        var device_list = [];
+        var device_stats = {};
+        var active_device_id;
+
+        var ctx = document.getElementById('myChart');
+        var chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+            },
+            options: {
+                scales: {
+                    xAxes: [{
+                        type: 'time',
+                        time: {
+                            displayFormats: {
+                                quarter: 'MMM YYYY'
+                            }
+                        },
+                        stacked: true
+                    }],
+                    yAxes: [{
+                        stacked: true
+                    }]
+                }
+            }
+        });
+
+        fetch('/getdata')
+            .then(
+                function (response) {
+                    if (response.status !== 200) {
+                        console.log('Looks like there was a problem. Status Code: ' +
+                            response.status);
+                        return;
+                    }
+
+                    // Examine the text in the response
+                    response.json().then(function (data) {
+                        fetched = data["stats"];
+                        //fetched = fetched.slice(fetched.length - 360, fetched.length);
+                        device_list = data["devices"];
+
+                        var device_ul = $('#deviceList')
+                        device_list.forEach((value, index) => {
+                            var li = $('<li/>')
+                                .addClass('nav-item')
+                                .appendTo(device_ul);
+                            var a = $('<a/>')
+                                .addClass('nav-link')
+                                .attr('id', 'device' + value.id)
+                                .attr("href", `javascript:renderDeviceStats(${value.id})`)
+                                .text(value.name)
+                                .appendTo(li);
+                        })
+
+                        device_list.forEach((value, index) => {
+                            device_stats[value.id] = fetched.filter((item) => item.device_id == value.id)
+                        })
+
+                        renderDeviceStats(device_list[0].id);
+                    });
+
+                }
+            )
+            .catch(function (err) {
+                console.log('Fetch Error :-S', err);
+            });
+        function renderDeviceStats(i) {
+            active_device_id = i;
+            $('a.active').removeClass('active');
+            $('#device' + i).addClass('active');
+
+            chart.data.datasets = [{
+                label: 'Download',
+                data: device_stats[i].map((item) => ({
+                    x: new Date(item.timestamp * 1000),
+                    y: Math.trunc(item.download / 1024 / 10.24) / 100
+                })),
+                borderWidth: 1,
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                borderColor: 'rgba(255, 99, 132, 1)'
+            }, {
+                label: 'Upload',
+                data: device_stats[i].map((item) => ({
+                    x: new Date(item.timestamp * 1000),
+                    y: -Math.trunc(item.upload / 1024 / 10.24) / 100
+                })),
+                borderWidth: 1,
+                backgroundColor: 'rgba(30, 120, 150, 0.2)',
+                borderColor: 'rgba(30, 120, 150, 1)'
+            }];
+            chart.update();
+        }
+
+        function renameDevice() {
+            var newname = $('#newNameInput').val();
+            if (newname == "") {
+                alert("Please do not test around!")
+                return
+            }
+            
+            formData = new FormData();
+            formData.append('device_id', active_device_id);
+            formData.append('newname', newname);
+            fetch('/rename', {
+                method : "POST",
+                body : formData
+            }).then(() => {
+                $("a.active").text(newname);
+            })
+        }
+    </script>
+</body>
+
+</html>

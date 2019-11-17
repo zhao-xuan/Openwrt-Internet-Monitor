@@ -3,4 +3,4 @@ import time
 
 while True:
 	get_stats()
-	time.sleep(3)
+	time.sleep(60)
