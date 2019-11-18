@@ -29,13 +29,24 @@
                     <h1 class="h2">Dashboard</h1>
                     <div class="btn-toolbar mb-2 mb-md-0">
                         <div class="btn-group mr-2">
-                            <button type="button" class="btn btn-sm btn-outline-secondary" data-toggle="modal" data-target="#exampleModal">Rename</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-toggle="modal"
+                                data-target="#exampleModal">Rename</button>
                             <button type="button" class="btn btn-sm btn-outline-secondary">Export</button>
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle">
-                            <span data-feather="calendar"></span>
-                            This week
-                        </button>
+                        <div class="dropdown">
+                            <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton"
+                                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                Last 12 Hrs
+                            </button>
+                            <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                <a data-view-since="6hr" class="dropdown-item" href="#">Last 6 Hr</a>
+                                <a data-view-since="12hr" class="dropdown-item active" href="#">Last 12 Hr</a>
+                                <a data-view-since="24hr" class="dropdown-item" href="#">Last 24 Hr</a>
+                                <a data-view-since="2days" class="dropdown-item" href="#">Last 2 Days</a>
+                                <a data-view-since="lastweek" class="dropdown-item" href="#">Last Week</a>
+                                <a data-view-since="lastmonth" class="dropdown-item" href="#">Last Month</a>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <canvas id="myChart" class="my-4 w-100" width="900" height="380"></canvas>
@@ -73,7 +84,8 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" onclick="renameDevice()" data-dismiss="modal">Save changes</button>
+                    <button type="button" class="btn btn-primary" onclick="renameDevice()" data-dismiss="modal">Save
+                        changes</button>
                 </div>
             </div>
         </div>
@@ -119,50 +131,74 @@
             }
         });
 
-        fetch('/getdata')
-            .then(
-                function (response) {
-                    if (response.status !== 200) {
-                        console.log('Looks like there was a problem. Status Code: ' +
-                            response.status);
-                        return;
-                    }
-
-                    // Examine the text in the response
-                    response.json().then(function (data) {
-                        fetched = data["stats"];
-                        //fetched = fetched.slice(fetched.length - 360, fetched.length);
-                        device_list = data["devices"];
-
-                        var device_ul = $('#deviceList')
-                        device_list.forEach((value, index) => {
-                            var li = $('<li/>')
-                                .addClass('nav-item')
-                                .appendTo(device_ul);
-                            var a = $('<a/>')
-                                .addClass('nav-link')
-                                .attr('id', 'device' + value.id)
-                                .attr("href", `javascript:renderDeviceStats(${value.id})`)
-                                .text(value.name)
-                                .appendTo(li);
-                        })
-
-                        device_list.forEach((value, index) => {
-                            device_stats[value.id] = fetched.filter((item) => item.device_id == value.id)
-                        })
-
-                        renderDeviceStats(device_list[0].id);
-                    });
-
+        fetch('/devices').then(
+            function (response) {
+                if (response.status !== 200) {
+                    console.log('Looks like there was a problem. Status Code: ' +
+                        response.status);
+                    return;
                 }
-            )
-            .catch(function (err) {
-                console.log('Fetch Error :-S', err);
-            });
+
+                response.json().then(function (data) {
+                    device_list = data["devices"];
+
+                    var device_ul = $('#deviceList')
+                    device_list.forEach((value, index) => {
+                        var li = $('<li/>')
+                            .addClass('nav-item')
+                            .appendTo(device_ul);
+                        var a = $('<a/>')
+                            .addClass('nav-link')
+                            .attr('id', 'device' + value.id)
+                            .attr("href", `javascript:renderDeviceStats(${value.id})`)
+                            .text(value.name)
+                            .appendTo(li);
+                    })
+
+
+
+                    getStats(12 * 3600);
+                })
+            }
+        )
+
+        function getStats(since) {
+            fetch('/viewSince?view_since=' + since)
+                .then(
+                    function (response) {
+                        if (response.status !== 200) {
+                            console.log('Looks like there was a problem. Status Code: ' +
+                                response.status);
+                            return;
+                        }
+
+                        // Examine the text in the response
+                        response.json().then(function (data) {
+                            fetched = data["stats"];
+                            //fetched = fetched.slice(fetched.length - 360, fetched.length);
+                            device_list.forEach((value, index) => {
+                                device_stats[value.id] = fetched.filter((item) => item.device_id == value.id)
+                            })
+                            renderDeviceStats(device_list[0].id);
+                        });
+
+                    }
+                )
+                .catch(function (err) {
+                    console.log('Fetch Error :-S', err);
+                });
+        }
+
+        
+
+
         function renderDeviceStats(i) {
+            if (active_device_id != undefined) {
+                $('#device' + active_device_id).removeClass('active');
+            }
+
             active_device_id = i;
-            $('a.active').removeClass('active');
-            $('#device' + i).addClass('active');
+            $('#device' + active_device_id).addClass('active');
 
             chart.data.datasets = [{
                 label: 'Download',
@@ -189,20 +225,51 @@
         function renameDevice() {
             var newname = $('#newNameInput').val();
             if (newname == "") {
-                alert("Please do not test around!")
+                alert("Please enter a valid device name!")
                 return
             }
-            
+
             formData = new FormData();
             formData.append('device_id', active_device_id);
             formData.append('newname', newname);
             fetch('/rename', {
-                method : "POST",
-                body : formData
+                method: "POST",
+                body: formData
             }).then(() => {
                 $("a.active").text(newname);
             })
         }
+
+        $('[data-view-since]').click(function (event) {
+            $("[data-view-since]").removeClass("active");
+            var temp = $(event.target).attr("data-view-since");
+            $(event.target).addClass("active");
+
+            var toint_time;
+            switch (temp) {
+                case "6hr":
+                    toint_time = 6 * 3600;
+                    break;
+                case "12hr":
+                    toint_time = 12 * 3600;
+                    break;
+                case "24hr":
+                    toint_time = 24 * 3600;
+                    break;
+                case "2days":
+                    toint_time = 48 * 3600;
+                    break;
+                case "lastweek":
+                    toint_time = 7 * 24 * 3600;
+                    break;
+                case "lastmonth":
+                    toint_time = 4 * 7 * 24 * 3600;
+                    break;
+                default:
+                    toint_time = 12;
+            }
+            getStats(toint_time);
+        });
     </script>
 </body>
 

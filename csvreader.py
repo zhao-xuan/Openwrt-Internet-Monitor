@@ -7,8 +7,8 @@ import json
 
 app = Flask(__name__, static_url_path='/static')
 
-url = 'http://192.168.1.1/cgi-bin/luci/admin/nlbw/data?type=csv&group_by=mac&order_by=-rx,-tx'
-login_cred = {'luci_username': 'root', 'luci_password': '59fa5JpTTbknQu6'}
+url = 'http://192.168.2.1/cgi-bin/luci/admin/nlbw/data?type=csv&group_by=mac&order_by=-rx,-tx'
+login_cred = {'luci_username': 'root', 'luci_password': 'asdf1234'}
 
 cookies = dict(sysauth='83063fd9dd72bf35ff40c6a6231aa39e')
 host_stats_by_interval = []
@@ -64,33 +64,19 @@ def get_stats():
 	except Exception as e:
 		print(e)
 
-@app.route('/getdata')
-def get_info1():
-	stats = db_cursor.execute("SELECT id, device_id, download, upload, timestamp FROM stats").fetchall()
+@app.route('/devices')
+def get_devices():
 	devices = db_cursor.execute("SELECT id, mac, name FROM devices").fetchall()
-
-	stats_dict = []
 	devices_dict = []
-	
-	for i in stats:
-		stats_dict.append({
-			"id": i[0],
-			"device_id": i[1],
-			"download": i[2],
-			"upload": i[3],
-			"timestamp": i[4]
-		})
-	
+
 	for i in devices:
 		devices_dict.append({
 			"id": i[0],
 			"mac": i[1],
 			"name": i[2]
 		})
-	return {
-		"stats" : stats_dict,
-		"devices" : devices_dict
-	}
+	
+	return {"devices" : devices_dict}
 
 
 @app.route('/')
@@ -108,6 +94,28 @@ def rename_device():
 	db_cursor.execute("UPDATE devices SET name = ? WHERE id = ?", (newname, device_id))
 	db_conn.commit()
 	return ''
+
+@app.route('/viewSince')
+def get_info():
+	viewSince = request.args.get("view_since")
+	stats = db_cursor.execute("SELECT id, device_id, download, upload, timestamp FROM stats WHERE timestamp > ? - ?", (time.time(), viewSince)).fetchall()
+
+	stats_dict = []
 	
+	for i in stats:
+		stats_dict.append({
+			"id": i[0],
+			"device_id": i[1],
+			"download": i[2],
+			"upload": i[3],
+			"timestamp": i[4]
+		})
+	
+	return {
+		"stats" : stats_dict,
+	}
+
+
+
 if __name__ == '__main__':
 	app.run(debug = True)
