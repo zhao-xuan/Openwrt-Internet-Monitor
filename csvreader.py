@@ -55,7 +55,8 @@ def get_stats():
 						"d_upload" : host_stats[i]["upload"] - prev_host_stats[i]["upload"]
 					})
 					device_id = db_cursor.execute("SELECT id FROM devices WHERE mac=?", (host_stats[i]["mac"],)).fetchall()[0][0]
-					db_cursor.execute("INSERT INTO stats (device_id, download, upload, timestamp) VALUES (?, ?, ?, ?)", (device_id, temp[i]['d_download'], temp[i]['d_upload'], timestamp))
+					db_cursor.execute('''INSERT INTO stats (device_id, download, upload, timestamp)
+					                   	 VALUES (?, ?, ?, ?)''', (device_id, temp[i]['d_download'], temp[i]['d_upload'], timestamp))
 				db_conn.commit()
 			
 			prev_host_stats = host_stats.copy()
@@ -91,7 +92,9 @@ def send_static_css():
 def rename_device():
 	device_id = request.form.get("device_id")
 	newname = request.form.get("newname")
-	db_cursor.execute("UPDATE devices SET name = ? WHERE id = ?", (newname, device_id))
+	db_cursor.execute('''UPDATE devices
+						 SET name = ?
+						 WHERE id = ?''', (newname, device_id))
 	db_conn.commit()
 	return ''
 
@@ -100,29 +103,33 @@ def get_info():
 	view_since = request.args.get("view_since")
 	device_id = request.args.get("device_id")
 	interval_by = request.args.get("interval_by")
-	stats = db_cursor.execute("SELECT id, device_id, download, upload, timestamp FROM stats WHERE timestamp > ? AND device_id = ?", (time.time() - float(view_since), device_id)).fetchall()
-
+	stats = db_cursor.execute('''SELECT id, device_id, sum(download) as download, sum(upload) as upload, timestamp
+	                           FROM stats 
+							   WHERE timestamp > ? AND device_id = ?
+							   GROUP BY CAST(timestamp / ? as int)''', (time.time() - float(view_since), device_id, interval_by)).fetchall()
 	stats_dict = []
-	index = 0
 	
 	for i in stats:
-		temp_download = 0
-		temp_upload = 0
-		for j in range(0+index*interval_by, interval_by):
-			temp_download += i[2]
-			temp_upload += i[3]
 		stats_dict.append({
 			#"id": i[0],
-			#"device_id": i[1],
-			"download": temp_download,
-			"upload": temp_upload,
+			"device_id": i[1],
+			"download": i[2],
+			"upload": i[3],
 			"timestamp": i[4]
 		})
 
-	
 	return {
 		"stats" : stats_dict,
 	}
 
+@app.route('/needArchive')
+def checkIfNeedArchive():
+	device_id = request.args.get('device_id')
+	first_date = db_cursor.execute('''SELECT min(timestamp) as earliest
+								FROM stats
+								WHERE device_id = ?''', (device_id,)).fetchall()
+	return str(first_date[0][0])
+
 if __name__ == '__main__':
 	app.run(debug = True, host="0.0.0.0")
+
