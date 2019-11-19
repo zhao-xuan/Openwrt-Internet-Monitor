@@ -3,6 +3,7 @@ import sqlite3
 import csv
 import requests
 import time
+import datetime
 import json
 
 app = Flask(__name__, static_url_path='/static')
@@ -16,7 +17,6 @@ prev_host_stats = []
 host_mac_address = []
 db_conn = sqlite3.connect('example.db', check_same_thread = False)
 db_cursor = db_conn.cursor()
-#create table stats (mac text, download integer, upload integer)
 
 def get_stats():
 	global prev_host_stats
@@ -54,10 +54,22 @@ def get_stats():
 						"d_download" : host_stats[i]["download"] - prev_host_stats[i]["download"],
 						"d_upload" : host_stats[i]["upload"] - prev_host_stats[i]["upload"]
 					})
-					device_id = db_cursor.execute("SELECT id FROM devices WHERE mac=?", (host_stats[i]["mac"],)).fetchall()[0][0]
+					device_id = db_cursor.execute("SELECT id FROM devices WHERE mac = ?", (host_stats[i]["mac"],)).fetchall()[0][0]
 					db_cursor.execute('''INSERT INTO stats (device_id, download, upload, timestamp)
 					                   	 VALUES (?, ?, ?, ?)''', (device_id, temp[i]['d_download'], temp[i]['d_upload'], timestamp))
-				db_conn.commit()
+					db_conn.commit()
+
+					hour = datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')[11:13]
+					minute = datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')[14:16]
+					if minute == "00" and (hour == "12" or hour == "00"):
+						hr_sum = db_cursor.execute('''SELECT sum(download) as download, sum(upload) as upload
+													FROM stats
+													WHERE timestamp > ?
+													GROUP BY device_id''', (int(timestamp) - 3600,)).fetchall()
+						db_cursor.execute('''INSERT INTO archived_stats (device_id, download, upload, timestamp)
+					                   	 VALUES (?, ?, ?, ?)''', (device_id, hr_sum[i][0], hr_sum[i][1], timestamp))
+						print("***Archived one set of data!!***")
+						db_conn.commit()
 			
 			prev_host_stats = host_stats.copy()
 			
@@ -128,8 +140,14 @@ def checkIfNeedArchive():
 	first_date = db_cursor.execute('''SELECT min(timestamp) as earliest
 								FROM stats
 								WHERE device_id = ?''', (device_id,)).fetchall()
-	return str(first_date[0][0])
+	archived_stats = db_cursor.execute('''SELECT download, upload, timestamp
+										FROM stats
+										GROUP BY device_id''').fetchall()
+	
+	return {
+		"firstdate" : str(first_date[0][0]),
+		"archived_stats" : archived_stats
+	}
 
 if __name__ == '__main__':
 	app.run(debug = True, host="0.0.0.0")
-

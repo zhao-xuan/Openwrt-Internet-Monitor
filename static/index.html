@@ -340,34 +340,31 @@
             fetch('/needArchive?device_id=' + active_device_id).then(
                 function (response) {
                     response.json().then(function (data) {
-                        var first_time = new Date(parseFloat(data)*1000)
+                        var first_time = new Date(parseFloat(data["firstdate"])*1000);
+                        var archived_list = data["archived_stats"];
+                        console.log(archived_list)
+
                         var now = new Date();
                         var month_diff = now.getMonth() - first_time.getMonth();
                         var day_diff = now.getDay() - first_time.getDay();
                         
                         if (month_diff > 0) {
-                            /*for (var i = 0; i < month_diff; i++) {
-                                var li = $('</tr>').appendTo(arvhied_table);
-                                var td_time = $('</td>').text(new Date(stats_temp[0].timestamp))
-                                var td_mac = $('</td>').text(device_list[stats_temp[0].id])
-                                var td_upload = $('</td>').text(device_list[stats_temp[0].id])
-                                var td_download = $('</td>').text(device_list[stats_temp[0].id])
-                            }*/
+                            //UNFINISHED!!!!!
+                            day_diff += 30*(month_diff)
                         } else if (day_diff > 0) {
                             for (var i = 0; i < day_diff; i++) {
                                 var li = $('<tr/>').appendTo(archived_table);
-                                first_time.setDate(first_time.getDate() + i)
-                                var td_time = $('<td/>').html(first_time.toString().substring(4,15)).appendTo(li)
-                                var td_mac = $('<td/>').html(device_list[active_device_id]).appendTo(li)
-                                //var td_upload = $('</td>').text(device_list[stats_temp[0].id]).appendTo(li)
-                                //var td_download = $('</td>').text(device_list[stats_temp[0].id]).appendTo(li)
+                                first_time.setDate(first_time.getDate() + i);
+                                var td_time = $('<td/>').html(first_time.toString().substring(4,15)).appendTo(li);
+                                var td_mac = $('<td/>').html(device_list[active_device_id]).appendTo(li);
+                                var td_upload = $('<td/>').text(archived_list[i][0]).appendTo(li);
+                                var td_download = $('<td/>').text(archived_list[i][1]).appendTo(li);
                             }
                         }
                     })
                 }
             );
         }
-
     </script>
 </body>
 
