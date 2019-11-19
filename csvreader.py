@@ -97,25 +97,32 @@ def rename_device():
 
 @app.route('/viewSince')
 def get_info():
-	viewSince = request.args.get("view_since")
-	stats = db_cursor.execute("SELECT id, device_id, download, upload, timestamp FROM stats WHERE timestamp > ? - ?", (time.time(), viewSince)).fetchall()
+	view_since = request.args.get("view_since")
+	device_id = request.args.get("device_id")
+	interval_by = request.args.get("interval_by")
+	stats = db_cursor.execute("SELECT id, device_id, download, upload, timestamp FROM stats WHERE timestamp > ? AND device_id = ?", (time.time() - float(view_since), device_id)).fetchall()
 
 	stats_dict = []
+	index = 0
 	
 	for i in stats:
+		temp_download = 0
+		temp_upload = 0
+		for j in range(0+index*interval_by, interval_by):
+			temp_download += i[2]
+			temp_upload += i[3]
 		stats_dict.append({
-			"id": i[0],
-			"device_id": i[1],
-			"download": i[2],
-			"upload": i[3],
+			#"id": i[0],
+			#"device_id": i[1],
+			"download": temp_download,
+			"upload": temp_upload,
 			"timestamp": i[4]
 		})
+
 	
 	return {
 		"stats" : stats_dict,
 	}
 
-
-
 if __name__ == '__main__':
-	app.run(debug = True)
+	app.run(debug = True, host="0.0.0.0")

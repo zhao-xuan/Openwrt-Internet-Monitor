@@ -33,12 +33,12 @@
                                 data-target="#exampleModal">Rename</button>
                             <button type="button" class="btn btn-sm btn-outline-secondary">Export</button>
                         </div>
-                        <div class="dropdown">
-                            <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton"
-                                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <div class="dropdown mr-2">
+                            <button class="btn btn-secondary dropdown-toggle" type="button" id="viewSinceButton"
+                                data-toggle="dropdown" aria-haspopup="true" style="width:7.5rem" aria-expanded="false">
                                 Last 12 Hrs
                             </button>
-                            <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                            <div class="dropdown-menu" aria-labelledby="viewSinceButton">
                                 <a data-view-since="6hr" class="dropdown-item" href="#">Last 6 Hr</a>
                                 <a data-view-since="12hr" class="dropdown-item active" href="#">Last 12 Hr</a>
                                 <a data-view-since="24hr" class="dropdown-item" href="#">Last 24 Hr</a>
@@ -47,6 +47,21 @@
                                 <a data-view-since="lastmonth" class="dropdown-item" href="#">Last Month</a>
                             </div>
                         </div>
+                        <div class="dropdown mr-2">
+                            <button class="btn btn-secondary dropdown-toggle" type="button" id="groupByInterval"
+                                data-toggle="dropdown" aria-haspopup="true" style="width:9.5rem" aria-expanded="false">
+                                Group By 1 HR
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-right" aria-labelledby="groupByInterval">
+                                <div class="dropdown-item" style="width:20rem;">
+                                    <label id="groupByIntervalLabel">Group By 1 HR</label><br>
+                                    <input type="range" class="custom-range" min="0" max="5" step="1"
+                                        id="groupByIntervalRange" style="pointer-events: auto;">
+                                </div>
+                            </div>
+                        </div>
+
+
                     </div>
                 </div>
                 <canvas id="myChart" class="my-4 w-100" width="900" height="380"></canvas>
@@ -103,10 +118,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.bundle.js"
         integrity="sha256-qSIshlknROr4J8GMHRlW3fGKrPki733tLq+qeMCR05Q=" crossorigin="anonymous"></script>
     <script type="text/javascript">
-        var fetched = [];
-        var device_list = [];
-        var device_stats = {};
         var active_device_id;
+        var active_since = 3600 * 12;
 
         var ctx = document.getElementById('myChart');
         var chart = new Chart(ctx, {
@@ -150,20 +163,32 @@
                         var a = $('<a/>')
                             .addClass('nav-link')
                             .attr('id', 'device' + value.id)
-                            .attr("href", `javascript:renderDeviceStats(${value.id})`)
+                            .attr("href", "javascript:void(0);")
+                            .attr("data-device-id", value.id)
                             .text(value.name)
                             .appendTo(li);
                     })
+                    $('[data-device-id]:first').addClass("active");
+
+                    $('[data-device-id]').click(function (event) {
+                        console.log(event);
+                        $("[data-device-id]").removeClass("active");
+                        var id_selected = $(event.target).attr("data-device-id");
+                        $(event.target).addClass("active");
+
+                        active_device_id = parseInt(id_selected);
+                        update(active_device_id, active_since);
+                    });
 
 
-
-                    getStats(12 * 3600);
+                    active_device_id = device_list[0].id;
+                    update(active_device_id, active_since);
                 })
             }
         )
 
-        function getStats(since) {
-            fetch('/viewSince?view_since=' + since)
+        function getStats(device_id, view_since, cbk) {
+            fetch('/viewSince?view_since=' + view_since + '&device_id=' + device_id)
                 .then(
                     function (response) {
                         if (response.status !== 200) {
@@ -171,17 +196,9 @@
                                 response.status);
                             return;
                         }
-
-                        // Examine the text in the response
                         response.json().then(function (data) {
-                            fetched = data["stats"];
-                            //fetched = fetched.slice(fetched.length - 360, fetched.length);
-                            device_list.forEach((value, index) => {
-                                device_stats[value.id] = fetched.filter((item) => item.device_id == value.id)
-                            })
-                            renderDeviceStats(device_list[0].id);
+                            cbk(data["stats"]);
                         });
-
                     }
                 )
                 .catch(function (err) {
@@ -189,20 +206,17 @@
                 });
         }
 
-        
 
+        function update(device_id, view_since) {
+            getStats(device_id, view_since, function (stats) {
+                renderDeviceStats(stats);
+            });
+        }
 
-        function renderDeviceStats(i) {
-            if (active_device_id != undefined) {
-                $('#device' + active_device_id).removeClass('active');
-            }
-
-            active_device_id = i;
-            $('#device' + active_device_id).addClass('active');
-
+        function renderDeviceStats(stats) {
             chart.data.datasets = [{
                 label: 'Download',
-                data: device_stats[i].map((item) => ({
+                data: stats.map((item) => ({
                     x: new Date(item.timestamp * 1000),
                     y: Math.trunc(item.download / 1024 / 10.24) / 100
                 })),
@@ -211,7 +225,7 @@
                 borderColor: 'rgba(255, 99, 132, 1)'
             }, {
                 label: 'Upload',
-                data: device_stats[i].map((item) => ({
+                data: stats.map((item) => ({
                     x: new Date(item.timestamp * 1000),
                     y: -Math.trunc(item.upload / 1024 / 10.24) / 100
                 })),
@@ -236,7 +250,7 @@
                 method: "POST",
                 body: formData
             }).then(() => {
-                $("a.active").text(newname);
+                $("#device" + active_device_id).text(newname);
             })
         }
 
@@ -245,31 +259,43 @@
             var temp = $(event.target).attr("data-view-since");
             $(event.target).addClass("active");
 
-            var toint_time;
+            $("#viewSinceButton").text($(event.target).text());
+            active_since = parseInt(temp) * 3600;
+            update(active_device_id, active_since);
+        });
+
+        $('#groupByIntervalRange').change(function (event) {
+            var temp = $(event.target).val();
             switch (temp) {
-                case "6hr":
-                    toint_time = 6 * 3600;
+                case "0":
+                    $('#groupByInterval').text("Group By 30 Min")
+                    $('#groupByIntervalLabel').text("Group By 30 Min")
                     break;
-                case "12hr":
-                    toint_time = 12 * 3600;
+                case "1":
+                    $('#groupByInterval').text("Group By 1 Hr")
+                    $('#groupByIntervalLabel').text("Group By 1 Hr")
                     break;
-                case "24hr":
-                    toint_time = 24 * 3600;
+                case "2":
+                    $('#groupByInterval').text("Group By 6 Hr")
+                    $('#groupByIntervalLabel').text("Group By 6 Hr")
                     break;
-                case "2days":
-                    toint_time = 48 * 3600;
+                case "3":
+                    $('#groupByInterval').text("Group By 12 Hr")
+                    $('#groupByIntervalLabel').text("Group By 12 Hr")
                     break;
-                case "lastweek":
-                    toint_time = 7 * 24 * 3600;
+                case "4":
+                    $('#groupByInterval').text("Group By 1 Day")
+                    $('#groupByIntervalLabel').text("Group By 1 Day")
                     break;
-                case "lastmonth":
-                    toint_time = 4 * 7 * 24 * 3600;
+                case "5":
+                    $('#groupByInterval').text("Group By 5 Day")
+                    $('#groupByIntervalLabel').text("Group By 30 Min")
                     break;
                 default:
-                    toint_time = 12;
+                    break;
             }
-            getStats(toint_time);
-        });
+        })
+
     </script>
 </body>
 
