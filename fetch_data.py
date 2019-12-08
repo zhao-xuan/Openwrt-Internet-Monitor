@@ -21,8 +21,6 @@ db_cursor.execute('CREATE TABLE IF NOT EXISTS "archived_stats" ("id" integer pri
 db_cursor.execute('CREATE TABLE IF NOT EXISTS "stats" ("id" integer primary key autoincrement, "device_id" integer, "download" integer, "upload" integer, "timestamp" integer)')
 db_cursor.execute('CREATE TABLE IF NOT EXISTS "devices" ("id" integer primary key autoincrement, "mac" text, "name" text)')
 
-
-
 def get_stats():
 	global prev_host_stats
 	
@@ -98,12 +96,16 @@ def get_devices():
 
 
 @app.route('/')
-def send_static():
+def send_static_html():
 	return app.send_static_file('index.html')
 
 @app.route('/app.css')
 def send_static_css():
 	return app.send_static_file('app.css')
+
+@app.route('/app.js')
+def send_static_js():
+	return app.send_static_file('app.js')
 	
 @app.route('/rename', methods = ['POST'])
 def rename_device():
@@ -146,7 +148,7 @@ def checkIfNeedArchive():
 								FROM stats
 								WHERE device_id = ?''', (device_id,)).fetchall()
 	archived_stats = db_cursor.execute('''SELECT download, upload, timestamp
-										FROM stats
+										FROM archived_stats
 										GROUP BY device_id''').fetchall()
 	
 	return {
