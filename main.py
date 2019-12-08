@@ -1,4 +1,4 @@
-from csvreader import *
+from fetch_data import *
 import time
 
 while True:

@@ -8,15 +8,20 @@ import json
 
 app = Flask(__name__, static_url_path='/static')
 
-url = 'http://192.168.2.1/cgi-bin/luci/admin/nlbw/data?type=csv&group_by=mac&order_by=-rx,-tx'
-login_cred = {'luci_username': 'root', 'luci_password': 'asdf1234'}
+url = 'http://192.168.1.1/cgi-bin/luci/admin/nlbw/data?type=csv&group_by=mac&order_by=-rx,-tx'
+login_cred = {'luci_username': 'root', 'luci_password': '59fa5JpTTbknQu6'}
 
-cookies = dict(sysauth='83063fd9dd72bf35ff40c6a6231aa39e')
+#cookies = dict(sysauth='83063fd9dd72bf35ff40c6a6231aa39e')
 host_stats_by_interval = []
 prev_host_stats = []
 host_mac_address = []
-db_conn = sqlite3.connect('example.db', check_same_thread = False)
+db_conn = sqlite3.connect('database.db', check_same_thread = False)
 db_cursor = db_conn.cursor()
+db_cursor.execute('CREATE TABLE IF NOT EXISTS "archived_stats" ("id" integer primary key autoincrement,"device_id" integer,"download" integer,"upload" integer,"timestamp" integer)')
+db_cursor.execute('CREATE TABLE IF NOT EXISTS "stats" ("id" integer primary key autoincrement, "device_id" integer, "download" integer, "upload" integer, "timestamp" integer)')
+db_cursor.execute('CREATE TABLE IF NOT EXISTS "devices" ("id" integer primary key autoincrement, "mac" text, "name" text)')
+
+
 
 def get_stats():
 	global prev_host_stats
