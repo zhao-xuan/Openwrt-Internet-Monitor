@@ -79,7 +79,7 @@ function getStats(device_id, view_since, interval_by, cbk) {
                 response.json().then(function (data) {
                     var stats_temp = data["stats"]
                     cbk(stats_temp);
-                    showArchive();
+                    showArchive(-1, -1, -1);
                 });
             }
         )
@@ -215,18 +215,27 @@ $('#groupByIntervalRange').change(function (event) {
 function showArchive(by_year, by_month, by_date) {
     var archived_table = $('#archivedTable');
 
-    fetch('/needArchive?device_id=' + active_device_id + '&by_year=' + by_year + '&by_month=' + by_month + '&by_date' + by_date).then(
+    fetch('/showArchive?device_id=' + active_device_id + '&by_year=' + by_year + '&by_month=' + by_month + '&by_date=' + by_date).then(
         function (response) {
             response.json().then(function (data) {
-                var archived_list = data["archived_stats"];
+                var archived_list = data["archived_dict"];
 
                 if (by_year == -1) {
+                    console.log(archived_list)
                     archived_list.forEach((value, index) => {
                         var li = $('<tr/>').appendTo(archived_table);
+                        li.addClass('clickable')
+                        li.attr('data-toggle', 'collapse');
+                        li.attr('data-target', '#group-of-rows-1');
+                        li.attr('aria-expanded', 'false');
+                        li.attr('aria-controls', 'group-of-rows-1');
+
                         var td_time = $('<td/>').html(value.t).appendTo(li);
                         var td_mac = $('<td/>').html(device_list[active_device_id]).appendTo(li);
                         var td_upload = $('<td/>').text(value.upload).appendTo(li);
                         var td_download = $('<td/>').text(value.download).appendTo(li);
+
+                        li.appendTo(archived_table);
                     })
                 } else if (by_month == -1) {
                     archived_list.forEach((value, index) => {
