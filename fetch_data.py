@@ -64,7 +64,7 @@ def get_stats():
 
 					hour = datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')[11:13]
 					minute = datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')[14:16]
-					if minute == "00" and (hour == "12" or hour == "00"):
+					if minute == "00" or minute == "30":
 						hr_sum = db_cursor.execute('''SELECT sum(download) as download, sum(upload) as upload
 													FROM stats
 													WHERE timestamp > ?
@@ -144,16 +144,40 @@ def get_info():
 @app.route('/needArchive')
 def checkIfNeedArchive():
 	device_id = request.args.get('device_id')
-	first_date = db_cursor.execute('''SELECT min(timestamp) as earliest
-								FROM stats
-								WHERE device_id = ?''', (device_id,)).fetchall()
-	archived_stats = db_cursor.execute('''SELECT download, upload, timestamp
-										FROM archived_stats
-										GROUP BY device_id''').fetchall()
+	by_year = request.args.get('by_year')
+	by_month = request.args.get('by_month')
+	by_date = request.args.get('by_date')
+
+	if by_year == -1:
+		archived_stats = db_cursor.execute('''SELECT sum(download), sum(upload), strftime("%Y"), datetime(timestamp, 'unixepoch')) as t
+											FROM archived_stats
+											WHERE device_id = ?
+											GROUP BY t''', (device_id,)).fetchall()
+	elif by_month == -1:
+		archived_stats = db_cursor.execute('''SELECT sum(download), sum(upload), strftime("%m"), datetime(timestamp, 'unixepoch')) as t
+											FROM archived_stats
+											WHERE device_id = ? AND strftime("%Y"), datetime(timestamp, 'unixepoch')) = ?
+											GROUP BY t''', (device_id,by_year)).fetchall()
+	elif by_date == -1:
+		archived_stats = db_cursor.execute('''SELECT sum(download), sum(upload), strftime("%d"), datetime(timestamp, 'unixepoch')) as t
+											FROM archived_stats
+											WHERE device_id = ? AND strftime("%Y%m"), datetime(timestamp, 'unixepoch')) = ? 
+											GROUP BY t''', (device_id, str(by_year) + str(by_month))).fetchall()
+	else:
+		archived_stats = db_cursor.execute('''SELECT sum(download), sum(upload), timestamp
+											FROM archived_stats
+											WHERE device_id = ? AND strftime("%Y%m%d"), datetime(timestamp, 'unixepoch')) = ?''', (device_id, str(by_year) + str(by_month) + str(by_date))).fetchall()
+	
+	archived_dict = []
+	for i in archived_stats:
+		archived_dict.append({
+			"download": i[0],
+			"upload": i[1],
+			"t": i[2]
+		})
 	
 	return {
-		"firstdate" : str(first_date[0][0]),
-		"archived_stats" : archived_stats
+		"archived_dict" : archived_dict
 	}
 
 if __name__ == '__main__':
