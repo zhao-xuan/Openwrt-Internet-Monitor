@@ -62,7 +62,10 @@ fetch('/devices').then(
             });
 
             active_device_id = device_list[0].id;
-            update(active_device_id, active_since, interval_by);
+            
+            update(active_device_id, active_since, interval_by, function() {
+                showArchive(-1, -1, -1);
+            });
         })
     }
 )
@@ -79,7 +82,6 @@ function getStats(device_id, view_since, interval_by, cbk) {
                 response.json().then(function (data) {
                     var stats_temp = data["stats"]
                     cbk(stats_temp);
-                    showArchive(-1, -1, -1);
                 });
             }
         )
@@ -89,10 +91,14 @@ function getStats(device_id, view_since, interval_by, cbk) {
 }
 
 
-function update(device_id, view_since, interval_by) {
+function update(device_id, view_since, interval_by, cbk) {
     getStats(device_id, view_since, interval_by, function (stats) {
         renderDeviceStats(stats);
+        if (cbk) {
+            cbk();
+        }
     });
+    
 }
 
 function renderDeviceStats(stats) {
@@ -213,7 +219,14 @@ $('#groupByIntervalRange').change(function (event) {
 })
 
 function showArchive(by_year, by_month, by_date) {
-    var archived_table = $('#archivedTable');
+    var appendTo = $('#archivedTable')
+    var mac_addr = "";
+
+    for (var i = 0; i < device_list.length; i++) {
+        if (device_list[i].id == active_device_id) {
+            mac_addr = device_list[i].mac;
+        }
+    }
 
     fetch('/showArchive?device_id=' + active_device_id + '&by_year=' + by_year + '&by_month=' + by_month + '&by_date=' + by_date).then(
         function (response) {
@@ -221,37 +234,48 @@ function showArchive(by_year, by_month, by_date) {
                 var archived_list = data["archived_dict"];
 
                 if (by_year == -1) {
-                    console.log(archived_list)
                     archived_list.forEach((value, index) => {
-                        var li = $('<tr/>').appendTo(archived_table);
-                        li.addClass('clickable')
+                        var li = $('<tr/>');
+                        li.attr('id', value.t);
                         li.attr('data-toggle', 'collapse');
-                        li.attr('data-target', '#group-of-rows-1');
-                        li.attr('aria-expanded', 'false');
-                        li.attr('aria-controls', 'group-of-rows-1');
+                        li.attr('href', '#tbody' + value.t);
+                        li.attr('onclick', "showArchive(" + value.t + ", -1, -1)");
 
                         var td_time = $('<td/>').html(value.t).appendTo(li);
-                        var td_mac = $('<td/>').html(device_list[active_device_id]).appendTo(li);
+                        var td_mac = $('<td/>').html(mac_addr).appendTo(li);
                         var td_upload = $('<td/>').text(value.upload).appendTo(li);
                         var td_download = $('<td/>').text(value.download).appendTo(li);
 
-                        li.appendTo(archived_table);
+                        li.appendTo(appendTo);
                     })
                 } else if (by_month == -1) {
                     archived_list.forEach((value, index) => {
-                        var li = $('<tr/>').appendTo(archived_table);
-                        var td_time = $('<td/>').html(i).appendTo(li);
-                        var td_mac = $('<td/>').html(device_list[active_device_id]).appendTo(li);
-                        var td_upload = $('<td/>').text(archived_list[i][0]).appendTo(li);
-                        var td_download = $('<td/>').text(archived_list[i][1]).appendTo(li);
+                        var li = $('<tr/>');
+                        li.attr('data-toggle', 'collapse');
+                        li.attr('href', '#tbody' + by_year + value.t);
+                        li.addClass('collapse');
+                        li.attr('id', 'tbody' + by_year);
+                        li.attr('onclick', "showArchive(" + by_year + ", " + value.t + ", -1)");
+
+                        var td_time = $('<td/>').html(value.t).appendTo(li);
+                        var td_mac = $('<td/>').html(mac_addr).appendTo(li);
+                        var td_upload = $('<td/>').text(value.upload).appendTo(li);
+                        var td_download = $('<td/>').text(value.download).appendTo(li);
+
+                        li.appendTo(appendTo);
                     })
+                    //tbody.appendTo(appendTo);
                 } else if (by_date == -1) {
                     archived_list.forEach((value, index) => {
-                        var li = $('<tr/>').appendTo(archived_table);
-                        var td_time = $('<td/>').html(i).appendTo(li);
-                        var td_mac = $('<td/>').html(device_list[active_device_id]).appendTo(li);
-                        var td_upload = $('<td/>').text(archived_list[i][0]).appendTo(li);
-                        var td_download = $('<td/>').text(archived_list[i][1]).appendTo(li);
+                        var li = $('<tr/>');
+                        li.attr('id', 'tbody' + by_year + by_month);
+                        li.addClass('collapse');
+                        var td_time = $('<td/>').html(value.t).appendTo(li);
+                        var td_mac = $('<td/>').html(mac_addr).appendTo(li);
+                        var td_upload = $('<td/>').text(value.upload).appendTo(li);
+                        var td_download = $('<td/>').text(value.download).appendTo(li);
+
+                        li.appendTo(appendTo);
                     })
                 }
             })
