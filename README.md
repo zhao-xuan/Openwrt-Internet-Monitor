@@ -9,11 +9,11 @@ This project is built based on Python 3.7.
 
 2. Type the following command to install the dependency:
 
-    opkg install luci-app-nlbwmon
+        opkg install luci-app-nlbwmon
 
 3. Install all python dependencies:
 
-    pip3 install flask
+        pip3 install flask
 
 ## How to Use
 1. Modify config.json file and fill the following information:
@@ -25,11 +25,11 @@ This project is built based on Python 3.7.
 2. Run `python3 main.py` to collect data. 
 Optional: You can use `screen` to maintain a persistent remote terminal session and run `main.py` on the router independently. See https://linux.die.net/man/1/screen for more details. See https://remysharp.com/2015/04/27/screen for a simple tutorial on how to use `screen`. To install screen on your router, run the following command:
 
-    apt-get install screen
-    ssh (username)@(your router address)
-    screen *--This command will start a new terminal*
-    ctrl-a d *--This will leave the session running and detach from the screen so you're back to your original terminal prompt.*
-    screen -rd *--This could resume the terminal session from the outside*
+        apt-get install screen
+        ssh (username)@(your router address)
+        screen *--This command will start a new terminal*
+        ctrl-a d *--This will leave the session running and detach from the screen so you're back to your original terminal prompt.*
+        screen -rd *--This could resume the terminal session from the outside*
 
 3. Run `python3 fetch_data.py`. The listening port has already been set up in this file, so no need to configure FLASK_APP environment variable.
 
