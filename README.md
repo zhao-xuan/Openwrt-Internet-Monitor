@@ -39,4 +39,4 @@ Optional: You can use `screen` to maintain a persistent remote terminal session 
 1. Added archived data functionality that will record data separately from the main database every 30 minutes
 2. Fixed UI bug where the archvied data could not be properly displayed
 
-<img src="demo/demo1.png" alt="Openwrt-internet-monitor" style="width:256px;height:auto">
+<img src="demo/demo2.png" alt="Openwrt-internet-monitor" style="width:256px;height:auto">
