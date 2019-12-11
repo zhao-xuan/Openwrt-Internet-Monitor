@@ -2,6 +2,10 @@ body {
 	font-size: .875rem;
 }
 
+.collapsing {
+	transition: none !important;
+}
+
 .feather {
 	width: 16px;
 	height: 16px;

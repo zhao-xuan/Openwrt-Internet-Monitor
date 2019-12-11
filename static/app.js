@@ -219,6 +219,16 @@ $('#groupByIntervalRange').change(function (event) {
 })
 
 function showArchive(by_year, by_month, by_date) {
+    if (typeof showArchive.YEAR_IS_SHOW == 'undefined') {
+        showArchive.YEAR_IS_SHOW = {};
+    }
+    if (typeof showArchive.MONTH_IS_SHOW == 'undefined') {
+        showArchive.MONTH_IS_SHOW = {};
+    }
+    if (typeof showArchive.DATE_IS_SHOW == 'undefined') {
+        showArchive.DATE_IS_SHOW = {};
+    }
+
     var appendTo = $('#archivedTable')
     var mac_addr = "";
 
@@ -235,7 +245,11 @@ function showArchive(by_year, by_month, by_date) {
 
                 if (by_year == -1) {
                     archived_list.forEach((value, index) => {
+                        if (showArchive.YEAR_IS_SHOW[value.t]) return;
+                        if (!(value.t in showArchive.YEAR_IS_SHOW)) {showArchive.YEAR_IS_SHOW[value.t] = true}
+
                         var li = $('<tr/>');
+                        li.addClass('clickable show');
                         li.attr('id', value.t);
                         li.attr('data-toggle', 'collapse');
                         li.attr('href', '#tbody' + value.t);
@@ -243,37 +257,43 @@ function showArchive(by_year, by_month, by_date) {
 
                         var td_time = $('<td/>').html(value.t).appendTo(li);
                         var td_mac = $('<td/>').html(mac_addr).appendTo(li);
-                        var td_upload = $('<td/>').text(value.upload).appendTo(li);
-                        var td_download = $('<td/>').text(value.download).appendTo(li);
+                        var td_upload = $('<td/>').text(prettyPrintUsage(value.upload)).appendTo(li);
+                        var td_download = $('<td/>').text(prettyPrintUsage(value.download)).appendTo(li);
 
                         li.appendTo(appendTo);
                     })
                 } else if (by_month == -1) {
                     archived_list.forEach((value, index) => {
+                        if (showArchive.MONTH_IS_SHOW[by_year.toString() + value.t]) return;
+                        if (!((by_year.toString() + value.t) in showArchive.MONTH_IS_SHOW)) {showArchive.MONTH_IS_SHOW[by_year.toString() + value.t] = true}
+                        
                         var li = $('<tr/>');
+                        li.addClass('clickable show');
                         li.attr('data-toggle', 'collapse');
                         li.attr('href', '#tbody' + by_year + value.t);
                         li.addClass('collapse');
                         li.attr('id', 'tbody' + by_year);
                         li.attr('onclick', "showArchive(" + by_year + ", " + value.t + ", -1)");
 
-                        var td_time = $('<td/>').html(value.t).appendTo(li);
+                        var td_time = $('<td/>').html(by_year + "-" + value.t).appendTo(li);
                         var td_mac = $('<td/>').html(mac_addr).appendTo(li);
-                        var td_upload = $('<td/>').text(value.upload).appendTo(li);
-                        var td_download = $('<td/>').text(value.download).appendTo(li);
+                        var td_upload = $('<td/>').text(prettyPrintUsage(value.upload)).appendTo(li);
+                        var td_download = $('<td/>').text(prettyPrintUsage(value.download)).appendTo(li);
 
                         li.appendTo(appendTo);
                     })
-                    //tbody.appendTo(appendTo);
                 } else if (by_date == -1) {
                     archived_list.forEach((value, index) => {
+                        if (showArchive.DATE_IS_SHOW[by_year.toString() + by_month.toString() + value.t]) return;
+                        if (!((by_year.toString() + by_month.toString() + value.t) in showArchive.DATE_IS_SHOW)) {showArchive.DATE_IS_SHOW[by_year.toString() + by_month.toString() + value.t] = true}
                         var li = $('<tr/>');
                         li.attr('id', 'tbody' + by_year + by_month);
-                        li.addClass('collapse');
-                        var td_time = $('<td/>').html(value.t).appendTo(li);
+                        li.addClass('clickable');
+                        li.addClass('collapse show');
+                        var td_time = $('<td/>').html(by_year + "-" + by_month + "-" + value.t).appendTo(li);
                         var td_mac = $('<td/>').html(mac_addr).appendTo(li);
-                        var td_upload = $('<td/>').text(value.upload).appendTo(li);
-                        var td_download = $('<td/>').text(value.download).appendTo(li);
+                        var td_upload = $('<td/>').text(prettyPrintUsage(value.upload)).appendTo(li);
+                        var td_download = $('<td/>').text(prettyPrintUsage(value.download)).appendTo(li);
 
                         li.appendTo(appendTo);
                     })
@@ -281,4 +301,19 @@ function showArchive(by_year, by_month, by_date) {
             })
         }
     );
+}
+
+function prettyPrintUsage(raw) {
+    var GB = 1024 ** 3;
+    var MB = 1024 ** 2;
+    var KB = 1024;
+    if (raw > GB) {
+        return (raw / GB).toFixed(2) + " GB";
+    } else if (raw > MB) {
+        return (raw / MB).toFixed(2) + " MB";
+    } else if (raw > KB) {
+        return (raw / KB).toFixed(2) + " KB";
+    } else {
+        return raw + " B";
+    }
 }
