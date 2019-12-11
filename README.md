@@ -2,7 +2,9 @@
 Monitor Internet Usage on Linux-based system Openwrt.
 Any open-sourced router/server with Openwrt system and nlbwmon installed can run this program.
 This project is nearly finished, but may need further UI design and maintainence for use.
-This project is built based on Python 3.7.
+This project is built based on *Python 3.7*.
+
+<img src="demo/demo1.png" alt="Openwrt-internet-monitor" style="width:256px;height:auto">
 
 ## Preconditions
 1. Install Openwrt system on your router/server. See details on https://openwrt.org. Set a username(default username: root) and password(default empty) for logging in your Openwrt system
@@ -27,11 +29,14 @@ Optional: You can use `screen` to maintain a persistent remote terminal session 
 
         apt-get install screen
         ssh (username)@(your router address)
-        screen *--This command will start a new terminal*
-        ctrl-a d *--This will leave the session running and detach from the screen so you're back to your original terminal prompt.*
-        screen -rd *--This could resume the terminal session from the outside*
+        screen --This command will start a new terminal
+        ctrl-a d --This will leave the session running and detach from the screen so you're back to your original terminal prompt
+        screen -rd --This could resume the terminal session from the outside
 
 3. Run `python3 fetch_data.py`. The listening port has already been set up in this file, so no need to configure FLASK_APP environment variable.
 
 ## Current Build
 1. Added archived data functionality that will record data separately from the main database every 30 minutes
+2. Fixed UI bug where the archvied data could not be properly displayed
+
+<img src="demo/demo1.png" alt="Openwrt-internet-monitor" style="width:256px;height:auto">

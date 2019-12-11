@@ -162,17 +162,17 @@ def checkIfNeedArchive():
 
 	if year == -1:
 		archived_stats = db_cursor.execute('''SELECT sum(download), sum(upload), strftime("%Y", datetime(timestamp, 'unixepoch')) as t
-											FROM archived_stats
+											FROM stats
 											WHERE device_id = ?
 											GROUP BY t''', (device_id,)).fetchall()
 	elif month == -1:
 		archived_stats = db_cursor.execute('''SELECT sum(download), sum(upload), strftime("%m", datetime(timestamp, 'unixepoch')) as t
-											FROM archived_stats
+											FROM stats
 											WHERE device_id = ? AND strftime("%Y", datetime(timestamp, 'unixepoch')) = ?
 											GROUP BY t''', (device_id, str(year))).fetchall()
 	elif date == -1:
 		archived_stats = db_cursor.execute('''SELECT sum(download), sum(upload), strftime("%d", datetime(timestamp, 'unixepoch')) as t
-											FROM archived_stats
+											FROM stats
 											WHERE device_id = ? AND strftime("%Y%m", datetime(timestamp, 'unixepoch')) = ? 
 											GROUP BY t''', (device_id, str(year) + str(month))).fetchall()
 	archived_dict = []
