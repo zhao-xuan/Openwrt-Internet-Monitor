@@ -7,15 +7,24 @@ import datetime
 import json
 
 app = Flask(__name__, static_url_path='/static')
+datastore = []
 
-url = 'http://192.168.1.1/cgi-bin/luci/admin/nlbw/data?type=csv&group_by=mac&order_by=-rx,-tx'
-login_cred = {'luci_username': 'root', 'luci_password': '59fa5JpTTbknQu6'}
+with open('config.json', 'r') as f:
+	datastore = json.load(f)
+
+router_address = datastore['router_address']
+root_username  = datastore['root_username']
+root_password  = datastore['root_password']
+database_name  = datastore['database_name']
+
+url = 'http://' + router_address +'/cgi-bin/luci/admin/nlbw/data?type=csv&group_by=mac&order_by=-rx,-tx'
+login_cred = {'luci_username': root_username, 'luci_password': root_password}
 
 #cookies = dict(sysauth='83063fd9dd72bf35ff40c6a6231aa39e')
 host_stats_by_interval = []
 prev_host_stats = []
 host_mac_address = []
-db_conn = sqlite3.connect('database.db', check_same_thread = False)
+db_conn = sqlite3.connect(database_name, check_same_thread = False)
 db_cursor = db_conn.cursor()
 db_cursor.execute('CREATE TABLE IF NOT EXISTS "archived_stats" ("id" integer primary key autoincrement,"device_id" integer,"download" integer,"upload" integer,"timestamp" integer)')
 db_cursor.execute('CREATE TABLE IF NOT EXISTS "stats" ("id" integer primary key autoincrement, "device_id" integer, "download" integer, "upload" integer, "timestamp" integer)')
@@ -31,8 +40,9 @@ def get_stats():
 			r = s.get(url)
 			
 			if not r.text.startswith('"mac"'):
-				raise Exception("Unexpected response from server (bad username/password?)")
-			
+				print("Unexpected response from server (bad username/password?)")
+				quit()
+						
 			reader = csv.reader(r.text.split('\n'), delimiter=';', quotechar='"')
 			
 			for row in reader:
@@ -79,6 +89,7 @@ def get_stats():
 			print("***Got one set of data!***")
 	except Exception as e:
 		print(e)
+		quit()
 
 @app.route('/devices')
 def get_devices():
