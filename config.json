@@ -1,6 +1,0 @@
-{
-    "router_address" : "192.168.2.1",
-    "root_username" : "root",
-    "root_password" : "asdf1234",
-    "database_name" : "data.db"
-}
